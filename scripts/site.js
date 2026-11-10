@@ -255,6 +255,31 @@
     if (!mark() && 'MutationObserver' in w) { var mo = new MutationObserver(function () { if (mark()) mo.disconnect(); }); mo.observe(scr, { childList: true, subtree: true }); }
   });
 
+  /* ---------------- footer finale: letters lift + glow toward the pointer; coordinates type themselves out */
+  var word = $('[data-word]');
+  if (word && FINE && !RM) {
+    var ltrs = $$('.ltr', word);
+    word.parentElement.addEventListener('pointermove', function (e) {
+      ltrs.forEach(function (l) {
+        var r = l.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+        var dist = Math.sqrt(dx * dx + dy * dy), k = clamp(1 - dist / 260, 0, 1);
+        l.style.setProperty('--ly', (-k * 0.22).toFixed(3) + 'em'); l.style.setProperty('--lr', (k * 10 * (dx > 0 ? -1 : 1)).toFixed(1) + 'deg');
+        l.classList.toggle('is-hot', k > 0.35);
+      });
+    }, { passive: true });
+    word.parentElement.addEventListener('pointerleave', function () { ltrs.forEach(function (l) { l.style.removeProperty('--ly'); l.style.removeProperty('--lr'); l.classList.remove('is-hot'); }); });
+  }
+  var typed = $('[data-type]');
+  if (typed && !RM && 'IntersectionObserver' in w) {
+    var full = typed.textContent; typed.setAttribute('aria-label', full);
+    var ito = new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting) return; ito.disconnect();
+      typed.textContent = ''; typed.classList.add('typed'); var n = 0;
+      (function tick() { typed.textContent = full.slice(0, ++n); if (n < full.length) setTimeout(tick, 28); else setTimeout(function () { typed.classList.remove('typed'); }, 1200); })();
+    }, { threshold: 0.6 });
+    ito.observe(typed);
+  }
+
   /* ---------------- orbit system: items ride an ellipse; hover/focus parks the orbit */
   $$('[data-orbit]').forEach(function (sys) {
     var items = $$('[data-orbit-item]', sys), n = items.length, a0 = 0, paused = false, last = 0;
