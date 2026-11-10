@@ -49,6 +49,35 @@
     item.addEventListener('mouseenter', function () { r.classList.add('is-hot'); }); item.addEventListener('mouseleave', function () { r.classList.remove('is-hot'); });
   });
 
+  // radar labels never stack: nearest-first, each label flips side, then nudges up/down, else waits for hover
+  var radar = d.querySelector('[data-radar]');
+  function declutter() {
+    if (!radar) return;
+    var nodes = Array.prototype.slice.call(radar.querySelectorAll('.radar__node'));
+    nodes.forEach(function (n) { n.classList.remove('is-quiet'); n.style.removeProperty('--ny'); });
+    var name = function (n) { return n.querySelector('.radar__name'); };
+    if (!nodes.length || getComputedStyle(name(nodes[0])).display === 'none') return;
+    var placed = [];
+    var hit = function (r) { return placed.some(function (p) { return !(r.right + 4 < p.left || r.left - 4 > p.right || r.bottom + 3 < p.top || r.top - 3 > p.bottom); }); };
+    nodes.forEach(function (n) {
+      var tries = [[false, 0], [true, 0], [false, -26], [true, -26], [false, 26], [true, 26]];
+      var ok = false;
+      for (var i = 0; i < tries.length && !ok; i++) {
+        n.classList.toggle('radar__node--l', tries[i][0] !== (n.getAttribute('data-side') === 'l'));
+        n.style.setProperty('--ny', tries[i][1] + 'px');
+        var r = name(n).getBoundingClientRect();
+        if (!hit(r)) { placed.push(r); ok = true; }
+      }
+      if (!ok) { n.style.removeProperty('--ny'); n.classList.add('is-quiet'); }
+    });
+  }
+  if (radar) {
+    Array.prototype.forEach.call(radar.querySelectorAll('.radar__node'), function (n) { if (n.classList.contains('radar__node--l')) n.setAttribute('data-side', 'l'); });
+    declutter();
+    w.addEventListener('resize', declutter, { passive: true });
+    if (d.fonts && d.fonts.ready) d.fonts.ready.then(declutter);
+  }
+
   // hero approach altitude (ft) follows the descent
   var alt = d.querySelector('[data-alt-ft]');
   if (alt && !RM) {
